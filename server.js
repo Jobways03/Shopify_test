@@ -2,7 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const dotenv = require("dotenv");
 
-const connectDB = require("./db");
+const connectDB = require("./database/db");
 const OrderVerification = require("./models/OrderVerification");
 const normalizePhone = require("./utils/normalizePhone");
 const getItemsSummary = require("./utils/itemSummary");
