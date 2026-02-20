@@ -1,7 +1,5 @@
 const axios = require("axios");
 
-const WA_NOTIFIER_URL = process.env.WA_NOTIFIER_WEBHOOK_URL;
-
 module.exports.sendOrderVerification = async function ({
   phone,
   customerFirstName,
@@ -17,7 +15,7 @@ module.exports.sendOrderVerification = async function ({
     order_number: orderNumber,
   };
 
-  return axios.post(WA_NOTIFIER_URL, payload, {
+  return axios.post(process.env.WA_NOTIFIER_WEBHOOK_URL, payload, {
     headers: {
       "Content-Type": "application/json",
     },

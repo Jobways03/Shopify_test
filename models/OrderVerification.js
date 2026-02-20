@@ -10,7 +10,7 @@ const OrderVerificationSchema = new mongoose.Schema(
 
     adminGraphqlId: {
       type: String,
-      required: true,
+      default: "",
     },
 
     orderNumber: {
