@@ -1,12 +1,13 @@
 const express = require("express");
 const crypto = require("crypto");
 const dotenv = require("dotenv");
-const axios = require("axios");
 
 const connectDB = require("./database/db");
 const OrderVerification = require("./models/OrderVerification");
 const normalizePhone = require("./utils/normalizePhone");
 const getItemsSummary = require("./utils/itemSummary");
+const hasWhatsappOptIn = require("./utils/hasWhatsappOptIn");
+const { sendOrderVerification } = require("./services/waNotifier.service");
 
 dotenv.config();
 connectDB();
@@ -108,38 +109,20 @@ app.post(
       console.log("✅ Verification record stored:", order.name);
 
       /* -------------------- 7. WHATSAPP OPT-IN CHECK -------------------- */
-      let whatsappOptIn = false;
-
-      if (Array.isArray(order.note_attributes)) {
-        const opt = order.note_attributes.find(
-          (attr) =>
-            attr.name === "whatsapp_opt_in" &&
-            String(attr.value).toLowerCase() === "true"
-        );
-        if (opt) whatsappOptIn = true;
-      }
-
-      if (!whatsappOptIn) {
+      if (!hasWhatsappOptIn(order)) {
         console.log("🚫 WhatsApp opt-in not found. Message not sent.");
         return res.status(200).send("OK");
       }
 
       /* -------------------- 8. SEND TO WA NOTIFIER -------------------- */
       try {
-        await axios.post(
-          process.env.WA_NOTIFIER_WEBHOOK_URL,
-          {
-            phone,
-            customer_first_name: firstName,
-            id: verificationPayload.shopifyOrderId,
-            total_price: verificationPayload.totalAmount,
-            order_number: verificationPayload.orderNumber,
-          },
-          {
-            headers: { "Content-Type": "application/json" },
-            timeout: 10000,
-          }
-        );
+        await sendOrderVerification({
+          phone,
+          customerFirstName: firstName,
+          orderId: verificationPayload.shopifyOrderId,
+          orderNumber: verificationPayload.orderNumber,
+          totalAmount: verificationPayload.totalAmount,
+        });
 
         console.log("📲 WA Notifier triggered successfully");
       } catch (waErr) {
