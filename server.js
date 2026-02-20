@@ -22,6 +22,23 @@ app.get("/health", (req, res) => {
 });
 
 /**
+ * DEV ONLY – Delete a stored order so the webhook can be re-tested.
+ * Usage: DELETE /dev/orders/:shopifyOrderId
+ */
+if (process.env.NODE_ENV === "development") {
+  app.delete("/dev/orders/:id", async (req, res) => {
+    const result = await OrderVerification.deleteOne({
+      shopifyOrderId: req.params.id,
+    });
+    if (result.deletedCount) {
+      console.log("🗑️ Deleted order:", req.params.id);
+      return res.json({ deleted: true });
+    }
+    return res.status(404).json({ deleted: false, message: "Not found" });
+  });
+}
+
+/**
  * Shopify Orders Webhook
  */
 app.post(
@@ -58,14 +75,7 @@ app.post(
 
       console.log("🔥 Order received:", order.name);
 
-      /* -------------------- 3. EXTRACT FIRST NAME -------------------- */
-      const firstName =
-        order.customer?.first_name ||
-        order.shipping_address?.first_name ||
-        order.billing_address?.first_name ||
-        "Customer";
-
-      /* -------------------- 4. PHONE EXTRACTION -------------------- */
+      /* -------------------- 3. PHONE EXTRACTION -------------------- */
       const phoneRaw =
         order.customer?.phone ||
         order.shipping_address?.phone ||
@@ -79,7 +89,7 @@ app.post(
 
       const phone = normalizePhone(phoneRaw);
 
-      /* -------------------- 5. IDEMPOTENCY CHECK -------------------- */
+      /* -------------------- 4. IDEMPOTENCY CHECK -------------------- */
       const alreadyExists = await OrderVerification.findOne({
         shopifyOrderId: String(order.id),
       });
@@ -89,19 +99,30 @@ app.post(
         return res.status(200).send("OK");
       }
 
-      /* -------------------- 6. BUILD VERIFICATION PAYLOAD -------------------- */
+      /* -------------------- 5. BUILD & SAVE VERIFICATION RECORD -------------------- */
+      const customerName =
+        order.shipping_address?.name ||
+        order.billing_address?.name ||
+        `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() ||
+        "Customer";
+
       const verificationPayload = {
         shopifyOrderId: String(order.id),
-        adminGraphqlId: order.admin_graphql_api_id,
         orderNumber: order.name,
+        customerName,
+        email: order.email || order.contact_email || "",
         phone,
         totalAmount: Number(order.total_price),
         currency: order.currency,
         paymentMethod: order.payment_gateway_names?.[0] || "UNKNOWN",
         itemsSummary: getItemsSummary(order.line_items),
-        city: order.shipping_address?.city || "",
-        state: order.shipping_address?.province || "",
-        pincode: order.shipping_address?.zip || "",
+        shippingAddress: {
+          address: order.shipping_address?.address1 || "",
+          city: order.shipping_address?.city || "",
+          state: order.shipping_address?.province || "",
+          pincode: order.shipping_address?.zip || "",
+          country: order.shipping_address?.country || "",
+        },
         verificationStatus: "PENDING",
       };
 
@@ -110,21 +131,15 @@ app.post(
       await OrderVerification.create(verificationPayload);
       console.log("✅ Verification record stored:", order.name);
 
-      /* -------------------- 7. WHATSAPP OPT-IN CHECK -------------------- */
+      /* -------------------- 6. WHATSAPP OPT-IN CHECK -------------------- */
       if (!hasWhatsappOptIn(order)) {
         console.log("🚫 WhatsApp opt-in not found. Message not sent.");
         return res.status(200).send("OK");
       }
 
-      /* -------------------- 8. SEND TO WA NOTIFIER -------------------- */
+      /* -------------------- 7. SEND FULL ORDER TO WA NOTIFIER -------------------- */
       try {
-        await sendOrderVerification({
-          phone,
-          customerFirstName: firstName,
-          orderId: verificationPayload.shopifyOrderId,
-          orderNumber: verificationPayload.orderNumber,
-          totalAmount: verificationPayload.totalAmount,
-        });
+        await sendOrderVerification(order);
 
         console.log("📲 WA Notifier triggered successfully");
       } catch (waErr) {

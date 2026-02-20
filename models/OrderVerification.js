@@ -8,14 +8,19 @@ const OrderVerificationSchema = new mongoose.Schema(
       unique: true,
     },
 
-    adminGraphqlId: {
-      type: String,
-      default: "",
-    },
-
     orderNumber: {
       type: String,
       required: true,
+    },
+
+    customerName: {
+      type: String,
+      required: true,
+    },
+
+    email: {
+      type: String,
+      default: "",
     },
 
     phone: {
@@ -43,19 +48,12 @@ const OrderVerificationSchema = new mongoose.Schema(
       required: true,
     },
 
-    city: {
-      type: String,
-      required: true,
-    },
-
-    state: {
-      type: String,
-      required: true,
-    },
-
-    pincode: {
-      type: String,
-      required: true,
+    shippingAddress: {
+      address: { type: String, default: "" },
+      city: { type: String, default: "" },
+      state: { type: String, default: "" },
+      pincode: { type: String, default: "" },
+      country: { type: String, default: "" },
     },
 
     verificationStatus: {

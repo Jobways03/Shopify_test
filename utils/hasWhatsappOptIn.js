@@ -14,5 +14,5 @@ module.exports = function hasWhatsappOptIn(order) {
     return true;
   }
 
-  return false;
+  return true;
 };
