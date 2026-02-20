@@ -48,6 +48,8 @@ app.post(
       /* -------------------- 2. PARSE PAYLOAD -------------------- */
       const order = JSON.parse(req.body.toString());
 
+      console.log(order);
+
       // 🔒 Ignore non-order / malformed payloads
       if (!order || !order.id || !order.name) {
         console.log("⚠️ Non-order webhook received. Ignoring.");
