@@ -104,7 +104,7 @@ app.post(
 
       console.log("✅ Verification payload:", verificationPayload);
 
-      // await OrderVerification.create(verificationPayload);
+      await OrderVerification.create(verificationPayload);
       console.log("✅ Verification record stored:", order.name);
 
       /* -------------------- 7. WHATSAPP OPT-IN CHECK -------------------- */
