@@ -139,7 +139,20 @@ app.post(
 
       /* -------------------- 7. SEND FULL ORDER TO WA NOTIFIER -------------------- */
       try {
-        await sendOrderVerification(order);
+        const orderPayload = {
+          ...order,
+          ...(order.customer && {
+            customer: { ...order.customer, phone },
+          }),
+          ...(order.shipping_address && {
+            shipping_address: { ...order.shipping_address, phone },
+          }),
+          ...(order.billing_address && {
+            billing_address: { ...order.billing_address, phone },
+          }),
+        };
+
+        await sendOrderVerification(orderPayload);
 
         console.log("📲 WA Notifier triggered successfully");
       } catch (waErr) {

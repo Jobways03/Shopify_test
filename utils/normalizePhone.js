@@ -11,9 +11,5 @@ module.exports = function normalizePhone(phone) {
     return `+${cleaned}`;
   }
 
-  if (cleaned.startsWith("+91")) {
-    return cleaned;
-  }
-
   return `+${cleaned}`;
 };
