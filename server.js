@@ -141,8 +141,15 @@ app.post(
       try {
         const orderPayload = {
           ...order,
+          phone,
           ...(order.customer && {
-            customer: { ...order.customer, phone },
+            customer: {
+              ...order.customer,
+              phone,
+              ...(order.customer.default_address && {
+                default_address: { ...order.customer.default_address, phone },
+              }),
+            },
           }),
           ...(order.shipping_address && {
             shipping_address: { ...order.shipping_address, phone },
